@@ -35,9 +35,11 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::pair;
 using boost::scoped_ptr;
 
+#define USE_OPENCV
+
 DEFINE_bool(gray, false,
     "When this option is on, treat images as grayscale ones");
-DEFINE_bool(shuffle, false,
+DEFINE_bool(shuffle, true,
     "Randomly shuffle the order of images and their labels");
 DEFINE_string(backend, "lmdb",
     "The backend {lmdb, leveldb} for storing the result");
@@ -61,6 +63,7 @@ DEFINE_bool(encoded, false,
     "When this option is on, the encoded image will be save in datum");
 DEFINE_string(encode_type, "",
     "Optional: What type should we encode the image as ('png','jpg',...).");
+
 
 int main(int argc, char** argv) {
 #ifdef USE_OPENCV
@@ -154,13 +157,15 @@ int main(int argc, char** argv) {
       enc = fn.substr(p);
       std::transform(enc.begin(), enc.end(), enc.begin(), ::tolower);
     }
-    filename = root_folder + lines[line_id].first;
+    //filename = root_folder + lines[line_id].first;
+    filename = lines[line_id].first;
     if (anno_type == "classification") {
       label = boost::get<int>(lines[line_id].second);
       status = ReadImageToDatum(filename, label, resize_height, resize_width,
           min_dim, max_dim, is_color, enc, datum);
     } else if (anno_type == "detection") {
-      labelname = root_folder + boost::get<std::string>(lines[line_id].second);
+      //labelname = root_folder + boost::get<std::string>(lines[line_id].second);
+      labelname = boost::get<std::string>(lines[line_id].second);
       status = ReadRichImageToAnnotatedDatum(filename, labelname, resize_height,
           resize_width, min_dim, max_dim, is_color, enc, type, label_type,
           name_to_label, &anno_datum);
