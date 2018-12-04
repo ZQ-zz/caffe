@@ -517,6 +517,15 @@ void VisualizeBBox(const vector<cv::Mat>& images, const Blob<Dtype>* detections,
                    const float threshold, const vector<cv::Scalar>& colors,
                    const map<int, string>& label_to_display_name,
                    const string& save_file);
+
+template <typename Dtype>
+void ShowPosNegBBoxes(Blob<Dtype>& blob_img,
+		const int num, //batch size
+		vector<NormalizedBBox>& prior_bboxes,
+		map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+		vector<map<int, vector<int> > >& all_match_indices,
+		vector<vector<int> >& all_neg_indices);
+
 #endif  // USE_OPENCV
 
 }  // namespace caffe

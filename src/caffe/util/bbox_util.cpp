@@ -1153,9 +1153,15 @@ void GetLocPredictions(const Dtype* loc_data, const int num,
         label_bbox[label][p].set_xmax(loc_data[start_idx + c * 4 + 2]);
         label_bbox[label][p].set_ymax(loc_data[start_idx + c * 4 + 3]);
       }
+      //LOG(INFO) << "p = " << p << std::endl;
     }
+    //LOG(FATAL) << "end " << std::endl;
     loc_data += num_preds_per_class * num_loc_classes * 4;
   }
+//  LOG(INFO) << "num = " << num << std::endl;
+//  LOG(INFO) << "num_preds_per_class = " << num_preds_per_class << std::endl;
+//  LOG(INFO) << "num_loc_classes = " << num_loc_classes << std::endl;
+//  LOG(FATAL) << "end " << std::endl;
 }
 
 // Explicit initialization.
@@ -2244,6 +2250,123 @@ void VisualizeBBox(const vector<cv::Mat>& images,
                    const float threshold, const vector<cv::Scalar>& colors,
                    const map<int, string>& label_to_display_name,
                    const string& save_file);
+
+
+//
+static long long int count = 0;
+
+//
+template <typename Dtype>
+void ShowPosNegBBoxes(Blob<Dtype>& blob_img,
+		const int num, //batch size
+		vector<NormalizedBBox>& prior_bboxes,
+		map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+		vector<map<int, vector<int> > >& all_match_indices,
+		vector<vector<int> >& all_neg_indices)
+{
+	if (count % 100 == 0)
+	{
+		//Blob<Dtype> *blob_img = bottom[4];
+		char text[260];
+		for (int n = 0; n < num; n++)
+		{
+			int channel = blob_img.channels();
+			int height = blob_img.height();
+			int width = blob_img.width();
+			cv::Mat img(height, width, CV_8UC3);
+
+			// get net input image
+			for (int i = 0; i < height; i++)
+			{
+				for (int j = 0; j < width; j++)
+				{
+					for (int k = 0; k < channel; k++)
+					{
+						//LOG(INFO) << "test: " << i << j << k;
+						img.at<cv::Vec3b>(i, j)[k] = (float)blob_img.data_at(n, k, i, j);
+					}
+				}
+			}
+
+			// draw ground truth bbox
+			vector<NormalizedBBox> gt_bboxes = all_gt_bboxes[n];
+			for (vector<NormalizedBBox>::iterator iter = gt_bboxes.begin(); iter != gt_bboxes.end(); iter++)
+			{
+				cv::Point pt1, pt2;
+				CvScalar c = CV_RGB(255, 0, 0); // red
+				pt1.x = round(iter->xmin()* img.cols);
+				pt1.y = round(iter->ymin() * img.rows);
+				pt2.x = round(iter->xmax() * img.cols);
+				pt2.y = round(iter->ymax() * img.rows);
+				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+			}
+
+			// draw positive priorbox
+			for (map<int, vector<int> >::iterator it = all_match_indices[n].begin();
+				it != all_match_indices[n].end(); ++it)
+			{
+				const vector<int>& match_index = it->second;
+				for (int j = 0; j < match_index.size(); ++j)
+				{
+					if (match_index[j] < 0)
+					{
+						continue;
+					}
+					cv::Point pt1, pt2;
+					CvScalar pos = CV_RGB(0, 255, 0); // green
+					pt1.x = round(prior_bboxes[j].xmin() * img.cols);
+					pt1.y = round(prior_bboxes[j].ymin() * img.rows);
+					pt2.x = round(prior_bboxes[j].xmax() * img.cols);
+					pt2.y = round(prior_bboxes[j].ymax() * img.rows);
+					//sprintf(text, "%d", pt2.y - pt1.y);
+					cv::rectangle(img, pt1, pt2, pos, 1, 8, 0);
+					//cv::putText(img, text, cvPoint(pt1.x, pt2.y + 10), CV_FONT_HERSHEY_SIMPLEX, 0.35, cvScalar(0, 255, 0));
+				}
+			}
+
+			// draw negative priorbox
+			for (vector<int>::iterator it = all_neg_indices[n].begin();
+					it != all_neg_indices[n].end(); ++it)
+			{
+				cv::Point pt1, pt2;
+				CvScalar c = CV_RGB(0, 0, 255); // blue
+				pt1.x = round(prior_bboxes[*it].xmin() * img.cols);
+				pt1.y = round(prior_bboxes[*it].ymin() * img.rows);
+				pt2.x = round(prior_bboxes[*it].xmax() * img.cols);
+				pt2.y = round(prior_bboxes[*it].ymax() * img.rows);
+				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+			}
+
+			int key;
+			cv::imshow("DetectRst", img);
+			key = cv::waitKey(2000);
+
+		}
+	}
+
+	count ++;
+    //int batch_id = 0;
+    //LOG(INFO) << "prior_bboxes.size() = " << prior_bboxes.size() << std::endl;
+    //LOG(INFO) << "all_gt_bboxes.size() = " << all_gt_bboxes[batch_id].size() << std::endl;
+    //LOG(INFO) << "all_match_indices_.size() = " << all_match_indices_[batch_id].size() << std::endl;
+    //LOG(FATAL) << "debug end ";
+}
+
+template
+void ShowPosNegBBoxes(Blob<float>& blob_img,
+		const int num, //batch size
+		vector<NormalizedBBox>& prior_bboxes,
+		map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+		vector<map<int, vector<int> > >& all_match_indices,
+		vector<vector<int> >& all_neg_indices);
+
+template
+void ShowPosNegBBoxes(Blob<double>& blob_img,
+		const int num, //batch size
+		vector<NormalizedBBox>& prior_bboxes,
+		map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+		vector<map<int, vector<int> > >& all_match_indices,
+		vector<vector<int> >& all_neg_indices);
 
 #endif  // USE_OPENCV
 

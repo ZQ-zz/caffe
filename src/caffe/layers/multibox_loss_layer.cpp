@@ -179,6 +179,14 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
                    &num_matches_, &num_negs, &all_match_indices_,
                    &all_neg_indices_);
 
+  ///////////////////////////////////////////
+  // debug
+#if 0
+  ShowPosNegBBoxes(*bottom[4], num_, prior_bboxes, all_gt_bboxes,
+		  all_match_indices_, all_neg_indices_);
+#endif
+  ///////////////////////////////////////////
+
   if (num_matches_ >= 1) {
     // Form data to pass on to loc_loss_layer_.
     vector<int> loc_shape(2);
