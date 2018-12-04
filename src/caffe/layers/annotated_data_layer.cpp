@@ -1,7 +1,12 @@
+#define USE_OPENCV
 #ifdef USE_OPENCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
 #endif  // USE_OPENCV
 #include <stdint.h>
+#include <string>
 
 #include <algorithm>
 #include <map>
@@ -149,6 +154,11 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     // get a anno_datum
     AnnotatedDatum& anno_datum = *(reader_.full().pop("Waiting for data"));
     read_time += timer.MicroSeconds();
+
+    ///////////////////////////////////////
+    //ShowGroundTruth("source_image", anno_datum);
+    ///////////////////////////////////////
+
     timer.Start();
     AnnotatedDatum distort_datum;
     AnnotatedDatum* expand_datum = NULL;
@@ -247,6 +257,37 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
       this->data_transformer_->Transform(sampled_datum->datum(),
                                          &(this->transformed_data_));
     }
+
+    ////////////////////////////////////////////////////////////////
+#if 0
+    //ShowGroundTruth("after_preprocess_image", *sampled_datum);
+    for (int i = 0; i < 4; i++)
+    {
+    	LOG(INFO) << "this->transformed_data_ shape: " << this->transformed_data_.shape(i) << std::endl;
+    }
+    LOG(INFO) << "transformed_anno_vec size: " << transformed_anno_vec.size() << std::endl;
+
+    Blob<Dtype>& transformed_blob = this->transformed_data_;
+	int channel = transformed_blob.shape(1);
+	int height = transformed_blob.shape(2);
+	int width = transformed_blob.shape(3);
+	cv::Mat cv_img(height, width, CV_8UC3);
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			for (int k = 0; k < channel; k++)
+			{
+				cv_img.at<cv::Vec3b>(i, j)[k] = (unsigned char)transformed_blob.data_at(0, k, i, j);
+			}
+		}
+	}
+    ShowGroundTruth("after_preprocess_image", cv_img, transformed_anno_vec);
+
+    //LOG(FATAL) << "debug " << std::endl;
+#endif
+    ////////////////////////////////////////////////////////////////
+
     // clear memory
     if (has_sampled) {
       delete sampled_datum;
@@ -257,6 +298,7 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     trans_time += timer.MicroSeconds();
 
     reader_.free().push(const_cast<AnnotatedDatum*>(&anno_datum));
+
   }
 
   // Store "rich" annotation if needed.
@@ -284,6 +326,16 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
             for (int a = 0; a < anno_group.annotation_size(); ++a) {
               const Annotation& anno = anno_group.annotation(a);
               const NormalizedBBox& bbox = anno.bbox();
+              //////////////////////////////////////////
+              // ignore small object
+              float width = bbox.xmax() - bbox.xmin();
+              float height = bbox.ymax() - bbox.ymin();
+              int difficult = 0;
+              if (width * height < (8.*8. / (256.*512.)))
+              {
+            	  difficult = 1;
+              }
+              ///////////////////////////////////////////
               top_label[idx++] = item_id;
               top_label[idx++] = anno_group.group_label();
               top_label[idx++] = anno.instance_id();
@@ -291,7 +343,7 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
               top_label[idx++] = bbox.ymin();
               top_label[idx++] = bbox.xmax();
               top_label[idx++] = bbox.ymax();
-              top_label[idx++] = bbox.difficult();
+              top_label[idx++] = difficult;
             }
           }
         }

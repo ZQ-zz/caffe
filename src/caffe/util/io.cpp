@@ -9,6 +9,7 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
+#define USE_OPENCV
 #ifdef USE_OPENCV
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -26,6 +27,7 @@
 #include "caffe/common.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/io.hpp"
+#include "caffe/blob.hpp"
 
 const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
@@ -191,6 +193,131 @@ void GetImageSize(const string& filename, int* height, int* width) {
   *width = cv_img.cols;
 }
 
+// used in convert to lmdb
+void show_groundtruth(const string& filename, const string& labelfile)
+{
+	CvScalar color[] = {
+		CV_RGB(255, 0, 0),
+		CV_RGB(0, 255, 0),
+		CV_RGB(0, 0, 255)
+	};
+
+	cv::Mat image = cv::imread(filename, 1);
+
+	std::ifstream infile(labelfile.c_str());
+	if (!infile.good())
+	{
+		LOG(INFO) << "Cannot open " << labelfile;
+		return;
+	}
+	int label;
+	float xmin, ymin, xmax, ymax;
+	while (infile >> label >> xmin >> ymin >> xmax >> ymax)
+	{
+		int c = label - 1;
+
+		int _xmin = (int)round(xmin);
+		int _ymin = (int)round(ymin);
+		int _xmax = (int)round(xmax);
+		int _ymax = (int)round(ymax);
+
+//		LOG(INFO) << "_xmin = " << _xmin << std::endl;
+//		LOG(INFO) << "_ymin = " << _ymin << std::endl;
+//		LOG(INFO) << "_xmax = " << _xmax << std::endl;
+//		LOG(INFO) << "_ymax = " << _ymax << std::endl;
+
+		cv::rectangle(image, cv::Point(_xmin, _ymin), cv::Point(_xmax, _ymax), color[c], 1, 8, 0);
+
+	}
+
+	cv::imshow("image with ground truth", image);
+	cv::waitKey(1);
+
+}
+
+// show ground truth in annotatedData layer
+void ShowGroundTruth(std::string window_name, AnnotatedDatum& anno_datum)
+{
+	bool showimage = true;
+	if (showimage)
+	{
+		cv::namedWindow(window_name);
+		Datum datum = anno_datum.datum();
+		cv::Mat cv_img = DecodeDatumToCVMat(datum, true);
+		int img_width = cv_img.cols;
+		int img_height = cv_img.rows;
+		for (int class_index = 0; class_index < anno_datum.annotation_group_size(); class_index++)
+		{
+			const AnnotationGroup& anno_group = anno_datum.annotation_group(class_index);
+
+			for (int obj_index = 0; obj_index < anno_group.annotation_size(); obj_index++)
+			{
+				const Annotation& anno = anno_group.annotation(obj_index);
+				const NormalizedBBox& onebbox = anno.bbox();
+				int xmin = (int)(onebbox.xmin() * img_width + 0.5);
+				int ymin = (int)(onebbox.ymin() * img_height + 0.5);
+				int xmax = (int)(onebbox.xmax() * img_width + 0.5);
+				int ymax = (int)(onebbox.ymax() * img_height + 0.5);
+				//////////////////////////////////////////////////////////----------------------------
+				int real_class_index = anno_group.group_label();
+				string dest_line = "";
+
+				//if (real_class_index == 1 || real_class_index == 2)
+				{
+					dest_line = dest_line + std::to_string(real_class_index);
+					cv::putText(cv_img, dest_line.c_str(), cvPoint(xmin, ymin - 3), CV_FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+					cv::rectangle(cv_img, cv::Rect(xmin, ymin, xmax - xmin, ymax - ymin), cv::Scalar(0, 255, 0), 1, 8, 0);
+				}
+			}
+		}
+		cv::imshow(window_name, cv_img);
+		cv::waitKey(0);
+		//printf("The source img and annnotatioin show end \n");
+	}
+}
+
+// show ground truth in DataTransformer layer
+void ShowGroundTruth(std::string window_name, cv::Mat& cv_img,
+		vector<AnnotationGroup>& transformed_anno_vec)
+{
+	bool showimage = true;
+	if (showimage)
+	{
+		cv::namedWindow(window_name);
+		int img_width = cv_img.cols;
+		int img_height = cv_img.rows;
+		char text[260];
+
+		for (int class_index = 0; class_index < transformed_anno_vec.size(); class_index++)
+		{
+			const AnnotationGroup& anno_group = transformed_anno_vec[class_index];
+
+			for (int obj_index = 0; obj_index < anno_group.annotation_size(); obj_index++)
+			{
+				const Annotation& anno = anno_group.annotation(obj_index);
+				const NormalizedBBox& onebbox = anno.bbox();
+				int xmin = (int)(onebbox.xmin() * img_width + 0.5);
+				int ymin = (int)(onebbox.ymin() * img_height + 0.5);
+				int xmax = (int)(onebbox.xmax() * img_width + 0.5);
+				int ymax = (int)(onebbox.ymax() * img_height + 0.5);
+				//////////////////////////////////////////////////////////----------------------------
+				int real_class_index = anno_group.group_label();
+				string dest_line = "";
+
+				//if (real_class_index == 1 || real_class_index == 2)
+				{
+					dest_line = dest_line + std::to_string(real_class_index);
+					cv::putText(cv_img, dest_line.c_str(), cvPoint(xmin, ymin - 3), CV_FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+					cv::rectangle(cv_img, cv::Rect(xmin, ymin, xmax - xmin, ymax - ymin), cv::Scalar(0, 255, 0), 1, 8, 0);
+				}
+			}
+		}
+		cv::imshow(window_name, cv_img);
+		cv::waitKey(0);
+		//printf("The source img and annnotatioin show end \n");
+	}
+}
+
 bool ReadRichImageToAnnotatedDatum(const string& filename,
     const string& labelfile, const int height, const int width,
     const int min_dim, const int max_dim, const bool is_color,
@@ -218,9 +345,15 @@ bool ReadRichImageToAnnotatedDatum(const string& filename,
       } else if (labeltype == "json") {
         return ReadJSONToAnnotatedDatum(labelfile, ori_height, ori_width,
                                         name_to_label, anno_datum);
-      } else if (labeltype == "txt") {
-        return ReadTxtToAnnotatedDatum(labelfile, ori_height, ori_width,
-                                       anno_datum);
+      }
+      else if (labeltype == "txt")
+      {
+		//
+		//LOG(INFO) <<  labelfile << std::endl;
+		show_groundtruth(filename, labelfile);
+
+		return ReadTxtToAnnotatedDatum(labelfile, ori_height, ori_width, anno_datum);
+
       } else {
         LOG(FATAL) << "Unknown label file type.";
         return false;

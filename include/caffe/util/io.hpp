@@ -12,6 +12,7 @@
 #include "caffe/common.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/format.hpp"
+#include "caffe/blob.hpp"
 
 #ifndef CAFFE_TMP_DIR_RETRIES
 #define CAFFE_TMP_DIR_RETRIES 100
@@ -275,6 +276,12 @@ void EncodeCVMatToDatum(const cv::Mat& cv_img, const string& encoding,
                         Datum* datum);
 
 void CVMatToDatum(const cv::Mat& cv_img, Datum* datum);
+
+void ShowGroundTruth(std::string window_name, AnnotatedDatum& anno_datum);
+
+void ShowGroundTruth(std::string window_name, cv::Mat& cv_img,
+		vector<AnnotationGroup>& transformed_anno_vec);
+
 #endif  // USE_OPENCV
 
 }  // namespace caffe

@@ -11,6 +11,7 @@
 
 using google::protobuf::RepeatedPtrField;
 
+
 namespace caffe {
 
 /**

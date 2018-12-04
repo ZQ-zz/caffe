@@ -12,6 +12,8 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 
+#define USE_OPENCV
+
 namespace caffe {
 
 template<typename Dtype>
@@ -91,19 +93,26 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
 
   int h_off = 0;
   int w_off = 0;
-  if (crop_size) {
-    height = crop_size;
-    width = crop_size;
+  if (param_.has_crop_w() || param_.has_crop_h())
+  {
+	if (param_.has_crop_w() && param_.has_crop_h())
+	{
+		height = param_.crop_h();
+		width = param_.crop_w();
+	}
+
     // We only do random crop when we do training.
-    if (phase_ == TRAIN) {
-      h_off = Rand(datum_height - crop_size + 1);
-      w_off = Rand(datum_width - crop_size + 1);
-    } else {
-      h_off = (datum_height - crop_size) / 2;
-      w_off = (datum_width - crop_size) / 2;
+    if (phase_ == TRAIN)
+    {
+      h_off = Rand(datum_height - height + 1);
+      w_off = Rand(datum_width - width + 1);
+    }
+    else
+    {
+      h_off = (datum_height - height) / 2;
+      w_off = (datum_width - width) / 2;
     }
   }
-
   // Return the normalized crop bbox.
   crop_bbox->set_xmin(Dtype(w_off) / datum_width);
   crop_bbox->set_ymin(Dtype(h_off) / datum_height);
@@ -146,11 +155,13 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Dtype* transformed_data) {
+
   NormalizedBBox crop_bbox;
   bool do_mirror;
   Transform(datum, transformed_data, &crop_bbox, &do_mirror);
 }
 
+// 4
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob,
@@ -235,6 +246,7 @@ void DataTransformer<Dtype>::Transform(const vector<Datum> & datum_vector,
   }
 }
 
+// 3
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(
     const AnnotatedDatum& anno_datum, Blob<Dtype>* transformed_blob,
@@ -249,6 +261,7 @@ void DataTransformer<Dtype>::Transform(
   const bool do_resize = true;
   TransformAnnotation(anno_datum, do_resize, crop_bbox, *do_mirror,
                       transformed_anno_group_all);
+
 }
 
 template<typename Dtype>
@@ -260,6 +273,7 @@ void DataTransformer<Dtype>::Transform(
             &do_mirror);
 }
 
+// 2
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(
     const AnnotatedDatum& anno_datum, Blob<Dtype>* transformed_blob,
@@ -272,6 +286,7 @@ void DataTransformer<Dtype>::Transform(
   }
 }
 
+// 1
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(
     const AnnotatedDatum& anno_datum, Blob<Dtype>* transformed_blob,
@@ -589,11 +604,13 @@ void DataTransformer<Dtype>::Transform(const vector<cv::Mat> & mat_vector,
   }
 }
 
+// 5
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        Blob<Dtype>* transformed_blob,
                                        NormalizedBBox* crop_bbox,
                                        bool* do_mirror) {
+
   // Check dimensions.
   const int img_channels = cv_img.channels();
   const int channels = transformed_blob->channels();
