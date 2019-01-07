@@ -26,12 +26,18 @@ __global__ void ROIPoolForward(const int nthreads, const Dtype* bottom_data,
     int c = (index / pooled_width / pooled_height) % channels;
     int n = index / pooled_width / pooled_height / channels;
 
-    bottom_rois += n * 5;
-    int roi_batch_ind = bottom_rois[0];
-    int roi_start_w = round(bottom_rois[1] * spatial_scale);
-    int roi_start_h = round(bottom_rois[2] * spatial_scale);
-    int roi_end_w = round(bottom_rois[3] * spatial_scale);
-    int roi_end_h = round(bottom_rois[4] * spatial_scale);
+//    bottom_rois += n * 5;
+//    int roi_batch_ind = bottom_rois[0];
+//    int roi_start_w = round(bottom_rois[1] * spatial_scale);
+//    int roi_start_h = round(bottom_rois[2] * spatial_scale);
+//    int roi_end_w = round(bottom_rois[3] * spatial_scale);
+//    int roi_end_h = round(bottom_rois[4] * spatial_scale);
+	bottom_rois += n * 7;
+	int roi_batch_ind = bottom_rois[0];
+	int roi_start_w = round(bottom_rois[3] * 64);
+	int roi_start_h = round(bottom_rois[4] * 32);
+	int roi_end_w = round(bottom_rois[5] * 64) - 1;
+	int roi_end_h = round(bottom_rois[6] * 32) - 1;
 
     // Force malformed ROIs to be 1x1
     int roi_width = max(roi_end_w - roi_start_w + 1, 1);
@@ -107,17 +113,22 @@ __global__ void ROIPoolBackward(const int nthreads, const Dtype* top_diff,
     Dtype gradient = 0;
     // Accumulate gradient over all ROIs that pooled this element
     for (int roi_n = 0; roi_n < num_rois; ++roi_n) {
-      const Dtype* offset_bottom_rois = bottom_rois + roi_n * 5;
+//      const Dtype* offset_bottom_rois = bottom_rois + roi_n * 5;
+    	const Dtype* offset_bottom_rois = bottom_rois + roi_n * 7;
       int roi_batch_ind = offset_bottom_rois[0];
       // Skip if ROI's batch index doesn't match n
       if (n != roi_batch_ind) {
         continue;
       }
 
-      int roi_start_w = round(offset_bottom_rois[1] * spatial_scale);
-      int roi_start_h = round(offset_bottom_rois[2] * spatial_scale);
-      int roi_end_w = round(offset_bottom_rois[3] * spatial_scale);
-      int roi_end_h = round(offset_bottom_rois[4] * spatial_scale);
+//      int roi_start_w = round(offset_bottom_rois[1] * spatial_scale);
+//      int roi_start_h = round(offset_bottom_rois[2] * spatial_scale);
+//      int roi_end_w = round(offset_bottom_rois[3] * spatial_scale);
+//      int roi_end_h = round(offset_bottom_rois[4] * spatial_scale);
+		int roi_start_w = round(bottom_rois[3] * 64);
+		int roi_start_h = round(bottom_rois[4] * 32);
+		int roi_end_w = round(bottom_rois[5] * 64) - 1;
+		int roi_end_h = round(bottom_rois[6] * 32) - 1;
 
       // Skip if ROI doesn't include (h, w)
       const bool in_roi = (w >= roi_start_w && w <= roi_end_w &&

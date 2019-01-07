@@ -59,10 +59,14 @@ void ROIPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
     int roi_batch_ind = bottom_rois[0];
-    int roi_start_w = round(bottom_rois[1] * spatial_scale_);
-    int roi_start_h = round(bottom_rois[2] * spatial_scale_);
-    int roi_end_w = round(bottom_rois[3] * spatial_scale_);
-    int roi_end_h = round(bottom_rois[4] * spatial_scale_);
+//    int roi_start_w = round(bottom_rois[1] * spatial_scale_);
+//    int roi_start_h = round(bottom_rois[2] * spatial_scale_);
+//    int roi_end_w = round(bottom_rois[3] * spatial_scale_);
+//    int roi_end_h = round(bottom_rois[4] * spatial_scale_);
+    int roi_start_w = round(bottom_rois[3] * 64);
+    int roi_start_h = round(bottom_rois[4] * 32);
+    int roi_end_w = round(bottom_rois[5] * 64) - 1;
+    int roi_end_h = round(bottom_rois[6] * 32) - 1;
     CHECK_GE(roi_batch_ind, 0);
     CHECK_LT(roi_batch_ind, batch_size);
 
