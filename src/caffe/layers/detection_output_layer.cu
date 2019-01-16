@@ -117,24 +117,24 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
     top_data = top[0]->mutable_cpu_data();
     caffe_set<Dtype>(top[0]->count(), -1, top_data);
 
-    top[1]->Reshape(top_shape);
-    top_data_enlarge = top[1]->mutable_cpu_data();
-    caffe_set<Dtype>(top[1]->count(), -1, top_data_enlarge);
+//    top[1]->Reshape(top_shape);
+//    top_data_enlarge = top[1]->mutable_cpu_data();
+//    caffe_set<Dtype>(top[1]->count(), -1, top_data_enlarge);
 
     // Generate fake results per image.
     for (int i = 0; i < num; ++i) {
       top_data[0] = i;
       top_data += 7;
 
-      top_data_enlarge[0] = i;
-      top_data_enlarge += 7;
+//      top_data_enlarge[0] = i;
+//      top_data_enlarge += 7;
     }
   } else {
     top[0]->Reshape(top_shape);
     top_data = top[0]->mutable_cpu_data();
 
-    top[1]->Reshape(top_shape);
-    top_data_enlarge = top[1]->mutable_cpu_data();
+//    top[1]->Reshape(top_shape);
+//    top_data_enlarge = top[1]->mutable_cpu_data();
   }
 
   int count = 0;
@@ -334,7 +334,7 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
 template <typename Dtype>
 void DetectionOutputLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-  //NOT_IMPLEMENTED;
+  NOT_IMPLEMENTED;
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(DetectionOutputLayer);

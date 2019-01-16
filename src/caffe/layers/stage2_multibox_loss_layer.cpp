@@ -132,9 +132,9 @@ template <typename Dtype>
 void Stage2_MultiBoxLossLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
-  num_ = bottom[5]->num();
+  num_ = bottom[4]->num();
   num_priors_ = bottom[2]->height() / 4;
-  num_gt_ = bottom[4]->height();
+  num_gt_ = bottom[3]->height();
 //  CHECK_EQ(bottom[0]->num(), bottom[1]->num());
 //  CHECK_EQ(num_priors_ * loc_classes_ * 4, bottom[0]->channels())
 //      << "Number of priors must match number of location predictions.";
@@ -148,7 +148,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 //  const Dtype* loc_data = bottom[0]->cpu_data();
 //  const Dtype* conf_data = bottom[1]->cpu_data();
 //  const Dtype* prior_data = bottom[2]->cpu_data();
-  const Dtype* gt_data = bottom[4]->cpu_data(); //
+  const Dtype* gt_data = bottom[3]->cpu_data(); //
 
   // Retrieve all ground truth.
   map<int, vector<NormalizedBBox> > all_gt_bboxes;
@@ -185,7 +185,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
   ///////////////////////////////////////////
   // show debug
 #if 0
-	Blob<Dtype> &blob_img = *bottom[5];
+	Blob<Dtype> &blob_img = *bottom[4];
     int num = num_;
 	char text[260];
 	for (int n = 0; n < num; n++)
@@ -314,7 +314,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 
 #if 0
 			// get image
-			Blob<Dtype> &blob_img = *bottom[5];
+			Blob<Dtype> &blob_img = *bottom[4];
 			int channel = blob_img.channels();
 			int height = blob_img.height();
 			int width = blob_img.width();
@@ -519,7 +519,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 
 
 #if 0
-  ShowPosNegBBoxes(*bottom[5], num_, prior_bboxes, all_gt_bboxes,
+  ShowPosNegBBoxes(*bottom[4], num_, prior_bboxes, all_gt_bboxes,
 		  all_match_indices_, all_neg_indices_);
 #endif
   ///////////////////////////////////////////

@@ -174,7 +174,7 @@ void DetectionOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   // [image_id, label, confidence, xmin, ymin, xmax, ymax]
   top_shape.push_back(7);
   top[0]->Reshape(top_shape);
-  top[1]->Reshape(top_shape);
+//  top[1]->Reshape(top_shape);
 }
 
 template <typename Dtype>
