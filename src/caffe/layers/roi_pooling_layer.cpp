@@ -36,9 +36,9 @@ void ROIPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   channels_ = bottom[0]->channels();
   height_ = bottom[0]->height();
   width_ = bottom[0]->width();
-  top[0]->Reshape(bottom[1]->num(), channels_, pooled_height_,
+  top[0]->Reshape(bottom[1]->shape(2), channels_, pooled_height_,
       pooled_width_);
-  max_idx_.Reshape(bottom[1]->num(), channels_, pooled_height_,
+  max_idx_.Reshape(bottom[1]->shape(2), channels_, pooled_height_,
       pooled_width_);
 }
 
@@ -48,7 +48,7 @@ void ROIPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_rois = bottom[1]->cpu_data();
   // Number of ROIs
-  int num_rois = bottom[1]->num();
+  int num_rois = bottom[1]->shape(2);
   int batch_size = bottom[0]->num();
   int top_count = top[0]->count();
   Dtype* top_data = top[0]->mutable_cpu_data();

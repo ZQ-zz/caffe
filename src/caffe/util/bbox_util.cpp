@@ -2339,7 +2339,7 @@ void ShowPosNegBBoxes(Blob<Dtype>& blob_img,
 
 			int key;
 			cv::imshow("DetectRst", img);
-			key = cv::waitKey(2000);
+			key = cv::waitKey(0);
 
 		}
 	}

@@ -199,6 +199,13 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     EncodeLocPrediction(all_loc_preds, all_gt_bboxes, all_match_indices_,
                         prior_bboxes, prior_variances, multibox_loss_param_,
                         loc_pred_data, loc_gt_data);
+
+//	for (int ii = 0; ii < num_matches_ * 4; ii++)
+//	{
+//		LOG(INFO) << loc_pred_data[ii] << " " << loc_gt_data[ii];
+//	}
+//	cv::waitKey(0);
+
     loc_loss_layer_->Reshape(loc_bottom_vec_, loc_top_vec_);
     loc_loss_layer_->Forward(loc_bottom_vec_, loc_top_vec_);
   } else {

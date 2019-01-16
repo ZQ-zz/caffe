@@ -37,7 +37,7 @@ class Stage2_MultiBoxLossLayer : public LossLayer<Dtype> {
   // bottom[1] stores the confidence predictions.
   // bottom[2] stores the prior bounding boxes.
   // bottom[3] stores the ground truth bounding boxes.
-  virtual inline int ExactNumBottomBlobs() const { return 5; }
+  virtual inline int ExactNumBottomBlobs() const { return 6; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
  protected:
@@ -100,6 +100,7 @@ class Stage2_MultiBoxLossLayer : public LossLayer<Dtype> {
 
   int num_matches_;
   int num_conf_;
+  vector<int> match_indices_; // zq
   vector<map<int, vector<int> > > all_match_indices_;
   vector<vector<int> > all_neg_indices_;
 

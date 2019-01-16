@@ -34,10 +34,10 @@ __global__ void ROIPoolForward(const int nthreads, const Dtype* bottom_data,
 //    int roi_end_h = round(bottom_rois[4] * spatial_scale);
 	bottom_rois += n * 7;
 	int roi_batch_ind = bottom_rois[0];
-	int roi_start_w = round(bottom_rois[3] * 64);
-	int roi_start_h = round(bottom_rois[4] * 32);
-	int roi_end_w = round(bottom_rois[5] * 64) - 1;
-	int roi_end_h = round(bottom_rois[6] * 32) - 1;
+	int roi_start_w = round(bottom_rois[3] * width);
+	int roi_start_h = round(bottom_rois[4] * height);
+	int roi_end_w = round(bottom_rois[5] * width) - 1;
+	int roi_end_h = round(bottom_rois[6] * height) - 1;
 
     // Force malformed ROIs to be 1x1
     int roi_width = max(roi_end_w - roi_start_w + 1, 1);
@@ -90,6 +90,13 @@ void ROIPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   Dtype* top_data = top[0]->mutable_gpu_data();
   int* argmax_data = max_idx_.mutable_gpu_data();
   int count = top[0]->count();
+//  LOG(INFO) << "count = " << count;
+//  LOG(INFO) << "height_ = " << height_;
+//  LOG(INFO) << "width_ = " << width_;
+//  LOG(INFO) << "channels_ = " << channels_;
+//  LOG(INFO) << "pooled_height_ = " << pooled_height_;
+//  LOG(INFO) << "pooled_width_ = " << pooled_width_;
+//  LOG(FATAL) << "end";
   // NOLINT_NEXT_LINE(whitespace/operators)
   ROIPoolForward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
       count, bottom_data, spatial_scale_, channels_, height_, width_,
@@ -125,10 +132,10 @@ __global__ void ROIPoolBackward(const int nthreads, const Dtype* top_diff,
 //      int roi_start_h = round(offset_bottom_rois[2] * spatial_scale);
 //      int roi_end_w = round(offset_bottom_rois[3] * spatial_scale);
 //      int roi_end_h = round(offset_bottom_rois[4] * spatial_scale);
-		int roi_start_w = round(bottom_rois[3] * 64);
-		int roi_start_h = round(bottom_rois[4] * 32);
-		int roi_end_w = round(bottom_rois[5] * 64) - 1;
-		int roi_end_h = round(bottom_rois[6] * 32) - 1;
+		int roi_start_w = round(bottom_rois[3] * width);
+		int roi_start_h = round(bottom_rois[4] * height);
+		int roi_end_w = round(bottom_rois[5] * width) - 1;
+		int roi_end_h = round(bottom_rois[6] * height) - 1;
 
       // Skip if ROI doesn't include (h, w)
       const bool in_roi = (w >= roi_start_w && w <= roi_end_w &&

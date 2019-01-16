@@ -174,6 +174,7 @@ void DetectionOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   // [image_id, label, confidence, xmin, ymin, xmax, ymax]
   top_shape.push_back(7);
   top[0]->Reshape(top_shape);
+  top[1]->Reshape(top_shape);
 }
 
 template <typename Dtype>
@@ -470,6 +471,12 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
 #ifdef CPU_ONLY
 STUB_GPU_FORWARD(DetectionOutputLayer, Forward);
 #endif
+
+template <typename Dtype>
+void DetectionOutputLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
+    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+  //NOT_IMPLEMENTED;
+}
 
 INSTANTIATE_CLASS(DetectionOutputLayer);
 REGISTER_LAYER_CLASS(DetectionOutput);

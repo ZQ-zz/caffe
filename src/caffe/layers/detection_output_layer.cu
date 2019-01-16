@@ -109,20 +109,32 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
   top_shape.push_back(num_kept);
   top_shape.push_back(7);
   Dtype* top_data;
+  Dtype* top_data_enlarge;
   if (num_kept == 0) {
     LOG(INFO) << "Couldn't find any detections";
     top_shape[2] = num;
     top[0]->Reshape(top_shape);
     top_data = top[0]->mutable_cpu_data();
     caffe_set<Dtype>(top[0]->count(), -1, top_data);
+
+    top[1]->Reshape(top_shape);
+    top_data_enlarge = top[1]->mutable_cpu_data();
+    caffe_set<Dtype>(top[1]->count(), -1, top_data_enlarge);
+
     // Generate fake results per image.
     for (int i = 0; i < num; ++i) {
       top_data[0] = i;
       top_data += 7;
+
+      top_data_enlarge[0] = i;
+      top_data_enlarge += 7;
     }
   } else {
     top[0]->Reshape(top_shape);
     top_data = top[0]->mutable_cpu_data();
+
+    top[1]->Reshape(top_shape);
+    top_data_enlarge = top[1]->mutable_cpu_data();
   }
 
   int count = 0;
@@ -157,6 +169,26 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
         top_data[count * 7 + 2] = cur_conf_data[idx];
         for (int k = 0; k < 4; ++k) {
           top_data[count * 7 + 3 + k] = cur_bbox_data[idx * 4 + k];
+        }
+        // enlarge
+        if (true)
+        {
+        	float xmin = top_data[count * 7 + 3];
+        	float ymin = top_data[count * 7 + 4];
+        	float xmax = top_data[count * 7 + 5];
+        	float ymax = top_data[count * 7 + 6];
+        	float width = xmax - xmin;
+        	float height = ymax - ymin;
+        	//CHECK_GT(width, 0);
+        	//CHECK_GT(height, 0);
+        	top_data_enlarge[count * 7 + 0] = top_data[count * 7 + 0];
+        	top_data_enlarge[count * 7 + 1] = top_data[count * 7 + 1];
+        	top_data_enlarge[count * 7 + 2] = top_data[count * 7 + 2];
+        	top_data_enlarge[count * 7 + 3] = std::max(0.0, std::min(1.0, xmin - 0.2 * width));
+        	top_data_enlarge[count * 7 + 4] = std::max(0.0, std::min(1.0, ymin - 0.2 * height));
+        	top_data_enlarge[count * 7 + 5] = std::max(0.0, std::min(1.0, xmin + 1.2 * width));
+        	top_data_enlarge[count * 7 + 6] = std::max(0.0, std::min(1.0, ymin + 1.2 * height));
+
         }
         if (need_save_) {
           // Generate output bbox.
@@ -297,6 +329,12 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
         label_to_display_name_, save_file_);
 #endif  // USE_OPENCV
   }
+}
+
+template <typename Dtype>
+void DetectionOutputLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
+    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+  //NOT_IMPLEMENTED;
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(DetectionOutputLayer);
