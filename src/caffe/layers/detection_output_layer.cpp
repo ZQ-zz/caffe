@@ -472,12 +472,6 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
 STUB_GPU_FORWARD(DetectionOutputLayer, Forward);
 #endif
 
-template <typename Dtype>
-void DetectionOutputLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
-    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-  //NOT_IMPLEMENTED;
-}
-
 INSTANTIATE_CLASS(DetectionOutputLayer);
 REGISTER_LAYER_CLASS(DetectionOutput);
 
