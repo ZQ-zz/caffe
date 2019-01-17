@@ -126,6 +126,8 @@ void Stage2_MultiBoxLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   } else {
     LOG(FATAL) << "Unknown confidence loss type.";
   }
+
+  count_ = 0;
 }
 
 template <typename Dtype>
@@ -143,6 +145,63 @@ void Stage2_MultiBoxLossLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom
 }
 
 template <typename Dtype>
+void Stage2_MultiBoxLossLayer<Dtype>::GetMatImage(const Blob<Dtype>& blob,
+		const int n, cv::Mat *cv_img)
+{
+	int channel = blob.channels();
+	int height = blob.height();
+	int width = blob.width();
+
+	CHECK_EQ(channel, 3);
+	*cv_img = cv::Mat::zeros(height, width, CV_8UC3);
+
+	// get net input image
+	for (int h = 0; h < height; h++)
+	{
+		for (int w = 0; w < width; w++)
+		{
+			for (int c = 0; c < channel; c++)
+			{
+				//LOG(INFO) << "test: " << i << j << k;
+				cv_img->at<cv::Vec3b>(h, w)[c] = static_cast<uchar>(blob.data_at(n, c, h, w));
+			}
+		}
+	}
+}
+
+template <typename Dtype>
+void Stage2_MultiBoxLossLayer<Dtype>::GetMatImages(const Blob<Dtype>& blob,
+		vector<cv::Mat>* cv_imgs)
+{
+	int num = blob.num();
+	LOG(INFO) << "num: " << num;
+	int channel = blob.channels();
+	int height = blob.height();
+	int width = blob.width();
+
+	CHECK_EQ(channel, 3);
+	cv::Mat cv_img(height, width, CV_8UC3);
+
+	// get net input image
+	for (int n = 0; n < num; n++)
+	{
+		for (int h = 0; h < height; h++)
+		{
+			for (int w = 0; w < width; w++)
+			{
+				for (int c = 0; c < channel; c++)
+				{
+					//LOG(INFO) << "test: " << i << j << k;
+					cv_img.at<cv::Vec3b>(h, w)[c] = static_cast<uchar>(blob.data_at(n, c, h, w));
+				}
+			}
+		}
+		cv_imgs->push_back(cv_img);
+	}
+
+}
+
+template <typename Dtype>
 void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
 //  const Dtype* loc_data = bottom[0]->cpu_data();
@@ -154,33 +213,6 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
   map<int, vector<NormalizedBBox> > all_gt_bboxes;
   GetGroundTruth(gt_data, num_gt_, background_label_id_, use_difficult_gt_,
                  &all_gt_bboxes);
-
-#if 0
-  // Retrieve all prior bboxes. It is same within a batch since we assume all
-  // images in a batch are of same dimension.
-  vector<NormalizedBBox> prior_bboxes;
-  vector<vector<float> > prior_variances;
-  GetPriorBBoxes(prior_data, num_priors_, &prior_bboxes, &prior_variances);
-
-  // Retrieve all predictions.
-  vector<LabelBBox> all_loc_preds;
-  GetLocPredictions(loc_data, num_, num_priors_, loc_classes_, share_location_,
-                    &all_loc_preds);
-
-  // Find matches between source bboxes and ground truth bboxes.
-  vector<map<int, vector<float> > > all_match_overlaps;
-  FindMatches(all_loc_preds, all_gt_bboxes, prior_bboxes, prior_variances,
-              multibox_loss_param_, &all_match_overlaps, &all_match_indices_);
-
-  num_matches_ = 0;
-  int num_negs = 0;
-  // Sample hard negative (and positive) examples based on mining type.
-  MineHardExamples(*bottom[1], all_loc_preds, all_gt_bboxes, prior_bboxes,
-                   prior_variances, all_match_overlaps, multibox_loss_param_,
-                   &num_matches_, &num_negs, &all_match_indices_,
-                   &all_neg_indices_);
-
-#endif
 
   ///////////////////////////////////////////
   // show debug
@@ -339,34 +371,25 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 			if (maxVal > 0.5f)
 			{
 				//encode
-			    float prior_width = det[5] - det[3];
-			    CHECK_GT(prior_width, 0);
-			    float prior_height = det[6] - det[4];
-			    CHECK_GT(prior_height, 0);
-			    float prior_center_x = (det[5] + det[3]) / 2.;
-			    float prior_center_y = (det[6] + det[4]) / 2.;
+				vector<float> prior_variance;
+				prior_variance.push_back(0.1);
+				prior_variance.push_back(0.1);
+				prior_variance.push_back(0.2);
+				prior_variance.push_back(0.2);
 
-			    float gt_xmin = all_gt_bboxes[stage1_batch][maxid].xmin();
-			    float gt_ymin = all_gt_bboxes[stage1_batch][maxid].ymin();
-			    float gt_xmax = all_gt_bboxes[stage1_batch][maxid].xmax();
-			    float gt_ymax = all_gt_bboxes[stage1_batch][maxid].ymax();
+				NormalizedBBox encode_bbox_gt;
+				EncodeBBox(stage1_bbox, prior_variance, PriorBoxParameter_CodeType_CENTER_SIZE,
+						false, all_gt_bboxes[stage1_batch][maxid], &encode_bbox_gt);
 
-			    float bbox_width = gt_xmax - gt_xmin;
-			    CHECK_GT(bbox_width, 0);
-			    float bbox_height = gt_ymax - gt_ymin;
-			    CHECK_GT(bbox_height, 0);
-			    float bbox_center_x = (gt_xmin + gt_xmax) / 2.;
-			    float bbox_center_y = (gt_ymin + gt_ymax) / 2.;
+				loc_gt_data[idx*4 + 0] = encode_bbox_gt.xmin();
+				loc_gt_data[idx*4 + 1] = encode_bbox_gt.ymin();
+				loc_gt_data[idx*4 + 2] = encode_bbox_gt.xmax();
+				loc_gt_data[idx*4 + 3] = encode_bbox_gt.ymax();
 
 			    loc_pred_data[idx*4 + 0] = loc[0];
 			    loc_pred_data[idx*4 + 1] = loc[1];
 			    loc_pred_data[idx*4 + 2] = loc[2];
 			    loc_pred_data[idx*4 + 3] = loc[3];
-
-				loc_gt_data[idx*4 + 0] = (bbox_center_x - prior_center_x) / prior_width / 0.1;
-				loc_gt_data[idx*4 + 1] = (bbox_center_y - prior_center_y) / prior_height / 0.1;
-				loc_gt_data[idx*4 + 2] = log(bbox_width / prior_width) / 0.2;
-				loc_gt_data[idx*4 + 3] = log(bbox_height / prior_height) / 0.2;
 
 #if 0
 				LOG(INFO) << "loc_pred_data:";
@@ -441,6 +464,107 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 			conf += 4;
 
 		}
+
+#if 0
+		det = bottom[2]->cpu_data(); //back to start add
+		// show all results
+		//if (count_ % 10000 == 0)
+		{
+			LOG(INFO) << "all num: " << num_loc;
+			LOG(INFO) << "pos num: " << match_indices_.size();
+			LOG(INFO) << "neg num: " << num_loc - match_indices_.size();
+
+			// get all images
+//			vector<cv::Mat> cv_imgs;
+//			Blob<Dtype>& blob_images = *bottom[4];
+//			GetMatImage(blob_images, &cv_imgs);
+
+			// show pos target
+			for (int i = 0; i < match_indices_.size(); i++)
+			{
+				LOG(INFO) << "loc_pred_data:";
+				for (int k = 0; k < 4; k++)
+				{
+				    LOG(INFO) << loc_pred_data[i*4 + k] << " ";
+				}
+				LOG(INFO) << std::endl;
+				LOG(INFO) << "loc_gt_data:";
+				for (int k = 0; k < 4; k++)
+				{
+				    LOG(INFO) << loc_gt_data[i*4 + k] << " ";
+				}
+				LOG(INFO) << std::endl;
+
+				vector<float> prior_variance;
+				prior_variance.push_back(0.1);
+				prior_variance.push_back(0.1);
+				prior_variance.push_back(0.2);
+				prior_variance.push_back(0.2);
+
+				int index = match_indices_[i];
+				CHECK_LE(index, num_loc);
+				int stage1_batch = det[index*7 + 0];
+				NormalizedBBox prior_bbox;
+				prior_bbox.set_xmin(det[index*7 + 3]);
+				prior_bbox.set_ymin(det[index*7 + 4]);
+				prior_bbox.set_xmax(det[index*7 + 5]);
+				prior_bbox.set_ymax(det[index*7 + 6]);
+
+				NormalizedBBox bbox;
+				bbox.set_xmin(loc_pred_data[i*4 + 0]);
+				bbox.set_ymin(loc_pred_data[i*4 + 1]);
+				bbox.set_xmax(loc_pred_data[i*4 + 2]);
+				bbox.set_ymax(loc_pred_data[i*4 + 3]);
+
+				NormalizedBBox decode_bbox;
+				DecodeBBox(prior_bbox, prior_variance, PriorBoxParameter_CodeType_CENTER_SIZE,
+						false, true, bbox, &decode_bbox);
+
+				NormalizedBBox bbox_gt;
+				bbox_gt.set_xmin(loc_gt_data[i*4 + 0]);
+				bbox_gt.set_ymin(loc_gt_data[i*4 + 1]);
+				bbox_gt.set_xmax(loc_gt_data[i*4 + 2]);
+				bbox_gt.set_ymax(loc_gt_data[i*4 + 3]);
+
+				NormalizedBBox decode_bbox_gt;
+				DecodeBBox(prior_bbox, prior_variance, PriorBoxParameter_CodeType_CENTER_SIZE,
+						false, true, bbox_gt, &decode_bbox_gt);
+
+//				// show
+//				cv::Mat img;
+//				GetMatImage(*bottom[4], stage1_batch, &img);
+////				cv_imgs[stage1_batch].copyTo(img);
+//				cv::Point pt1, pt2;
+//				CvScalar c;
+//				c = CV_RGB(0, 0, 255); // blue
+//				pt1.x = round(prior_bbox.xmin() * img.cols);
+//				pt1.y = round(prior_bbox.ymin() * img.rows);
+//				pt2.x = round(prior_bbox.xmax() * img.cols);
+//				pt2.y = round(prior_bbox.ymax() * img.rows);
+//				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+//
+//				c = CV_RGB(0, 255, 0); // green
+//				pt1.x = round(decode_bbox.xmin() * img.cols);
+//				pt1.y = round(decode_bbox.ymin() * img.rows);
+//				pt2.x = round(decode_bbox.xmax() * img.cols);
+//				pt2.y = round(decode_bbox.ymax() * img.rows);
+//				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+//
+//				c = CV_RGB(255, 0, 0); // red
+//				pt1.x = round(decode_bbox_gt.xmin() * img.cols);
+//				pt1.y = round(decode_bbox_gt.ymin() * img.rows);
+//				pt2.x = round(decode_bbox_gt.xmax() * img.cols);
+//				pt2.y = round(decode_bbox_gt.ymax() * img.rows);
+//				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+//
+//				cv::imshow("debug", img);
+//				cv::waitKey(1000);
+
+			}
+
+		}
+
+#endif
 
 		// loc
 		num_matches_ = idx;
