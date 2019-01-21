@@ -127,7 +127,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
     LOG(FATAL) << "Unknown confidence loss type.";
   }
 
-  count_ = 0;
+  //count_ = 0;
 }
 
 template <typename Dtype>
@@ -211,6 +211,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 
   // Retrieve all ground truth.
   map<int, vector<NormalizedBBox> > all_gt_bboxes;
+  CHECK_EQ(background_label_id_, 0);
   GetGroundTruth(gt_data, num_gt_, background_label_id_, use_difficult_gt_,
                  &all_gt_bboxes);
 
@@ -344,30 +345,6 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 				}
 			}
 
-#if 0
-			// get image
-			Blob<Dtype> &blob_img = *bottom[4];
-			int channel = blob_img.channels();
-			int height = blob_img.height();
-			int width = blob_img.width();
-			cv::Mat img(height, width, CV_8UC3);
-
-			// get net input image
-			{
-				for (int ii = 0; ii < height; ii++)
-				{
-					for (int jj = 0; jj < width; jj++)
-					{
-						for (int kk = 0; kk < channel; kk++)
-						{
-							//LOG(INFO) << "test: " << i << j << k;
-							img.at<cv::Vec3b>(ii, jj)[kk] = (float)blob_img.data_at(stage1_batch, kk, ii, jj);
-						}
-					}
-				}
-			}
-#endif
-
 			if (maxVal > 0.5f)
 			{
 				//encode
@@ -434,7 +411,7 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 			}
 			else
 			{
-
+				label = 0;
 			}
 
 			// conf
@@ -465,10 +442,17 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 
 		}
 
+//		if (count_ % 100 == 0)
+//		{
+//			LOG(INFO) << "all num: " << num_loc;
+//			LOG(INFO) << "pos num: " << match_indices_.size();
+//			LOG(INFO) << "neg num: " << num_loc - match_indices_.size();
+//		}
+
 #if 0
 		det = bottom[2]->cpu_data(); //back to start add
 		// show all results
-		//if (count_ % 10000 == 0)
+//		if (count_ % 10000 == 0)
 		{
 			LOG(INFO) << "all num: " << num_loc;
 			LOG(INFO) << "pos num: " << match_indices_.size();
@@ -482,6 +466,11 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 			// show pos target
 			for (int i = 0; i < match_indices_.size(); i++)
 			{
+				if (i > 10)
+				{
+					break;
+				}
+
 				LOG(INFO) << "loc_pred_data:";
 				for (int k = 0; k < 4; k++)
 				{
@@ -530,35 +519,35 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 				DecodeBBox(prior_bbox, prior_variance, PriorBoxParameter_CodeType_CENTER_SIZE,
 						false, true, bbox_gt, &decode_bbox_gt);
 
-//				// show
-//				cv::Mat img;
-//				GetMatImage(*bottom[4], stage1_batch, &img);
-////				cv_imgs[stage1_batch].copyTo(img);
-//				cv::Point pt1, pt2;
-//				CvScalar c;
-//				c = CV_RGB(0, 0, 255); // blue
-//				pt1.x = round(prior_bbox.xmin() * img.cols);
-//				pt1.y = round(prior_bbox.ymin() * img.rows);
-//				pt2.x = round(prior_bbox.xmax() * img.cols);
-//				pt2.y = round(prior_bbox.ymax() * img.rows);
-//				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
-//
-//				c = CV_RGB(0, 255, 0); // green
-//				pt1.x = round(decode_bbox.xmin() * img.cols);
-//				pt1.y = round(decode_bbox.ymin() * img.rows);
-//				pt2.x = round(decode_bbox.xmax() * img.cols);
-//				pt2.y = round(decode_bbox.ymax() * img.rows);
-//				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
-//
-//				c = CV_RGB(255, 0, 0); // red
-//				pt1.x = round(decode_bbox_gt.xmin() * img.cols);
-//				pt1.y = round(decode_bbox_gt.ymin() * img.rows);
-//				pt2.x = round(decode_bbox_gt.xmax() * img.cols);
-//				pt2.y = round(decode_bbox_gt.ymax() * img.rows);
-//				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
-//
-//				cv::imshow("debug", img);
-//				cv::waitKey(1000);
+				// show
+				cv::Mat img;
+				GetMatImage(*bottom[4], stage1_batch, &img);
+//				cv_imgs[stage1_batch].copyTo(img);
+				cv::Point pt1, pt2;
+				CvScalar c;
+				c = CV_RGB(0, 0, 255); // blue
+				pt1.x = round(prior_bbox.xmin() * img.cols);
+				pt1.y = round(prior_bbox.ymin() * img.rows);
+				pt2.x = round(prior_bbox.xmax() * img.cols);
+				pt2.y = round(prior_bbox.ymax() * img.rows);
+				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+
+				c = CV_RGB(0, 255, 0); // green
+				pt1.x = round(decode_bbox.xmin() * img.cols);
+				pt1.y = round(decode_bbox.ymin() * img.rows);
+				pt2.x = round(decode_bbox.xmax() * img.cols);
+				pt2.y = round(decode_bbox.ymax() * img.rows);
+				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+
+				c = CV_RGB(255, 0, 0); // red
+				pt1.x = round(decode_bbox_gt.xmin() * img.cols);
+				pt1.y = round(decode_bbox_gt.ymin() * img.rows);
+				pt2.x = round(decode_bbox_gt.xmax() * img.cols);
+				pt2.y = round(decode_bbox_gt.ymax() * img.rows);
+				cv::rectangle(img, pt1, pt2, c, 1, 8, 0);
+
+				cv::imshow("debug", img);
+				cv::waitKey(0);
 
 			}
 
@@ -639,6 +628,15 @@ void Stage2_MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 #endif
 
 	}
+
+//	if (count_ >= 100000)
+//	{
+//		count_ = 0;
+//	}
+//	else
+//	{
+//		count_++;
+//	}
 
 
 #if 0
