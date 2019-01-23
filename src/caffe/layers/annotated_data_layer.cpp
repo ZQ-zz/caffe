@@ -344,6 +344,12 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
               top_label[idx++] = bbox.xmax();
               top_label[idx++] = bbox.ymax();
               top_label[idx++] = difficult;
+
+//              //if (anno_group.group_label() < 0 || anno_group.group_label() > 3)
+//              {
+//            	  LOG(INFO) << "anno_group.group_label(): " << anno_group.group_label();
+//              }
+
             }
           }
         }

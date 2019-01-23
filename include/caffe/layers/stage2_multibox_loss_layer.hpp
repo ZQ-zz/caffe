@@ -42,9 +42,23 @@ class Stage2_MultiBoxLossLayer : public LossLayer<Dtype> {
 
  protected:
   virtual void GetMatImage(const Blob<Dtype>& blob,
-			const int n, cv::Mat *cv_img);
+		  const int n, cv::Mat *cv_img);
   virtual void GetMatImages(const Blob<Dtype>& blob,
-			vector<cv::Mat>* cv_imgs);
+		  vector<cv::Mat>* cv_imgs);
+
+  virtual void FindPosMatches(const Blob<Dtype>& bottom_loc,
+  		const Blob<Dtype>& bottom_det,
+  		map<int, vector<NormalizedBBox> > all_gt_bboxes,
+  		vector<NormalizedBBox>* matched_gt_bboxes);
+
+  virtual void FillPosLocPredAndEncodeGtLoc(const Blob<Dtype>& bottom_loc,
+  		const Blob<Dtype>& bottom_det,
+  		const vector<NormalizedBBox> matched_gt_bboxes,
+  		Dtype* loc_pred_data, Dtype* loc_gt_data);
+
+  virtual void FillConfPredAndLabel(const Blob<Dtype>& bottom_conf,
+		const vector<NormalizedBBox> matched_gt_bboxes,
+  		Dtype* conf_pred_data, Dtype* conf_gt_data);
 
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
